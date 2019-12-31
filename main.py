@@ -8,11 +8,13 @@ class Ui(QtWidgets.QMainWindow):
         super(Ui, self).__init__()
         uic.loadUi('main.ui', self)
 
+        self.fileName = None
+
         self.loadDataButton = self.findChild(QtWidgets.QPushButton, 'loadDataButton')
         self.loadDataButton.clicked.connect(self.loadCSV)
 
         self.hashDataButton = self.findChild(QtWidgets.QPushButton, 'hashDataButton')
-        # self.hashDataButton.clicked.connect(None)   
+        self.hashDataButton.clicked.connect(self.hashData)   
 
         self.tableView = self.findChild(QtWidgets.QTableView, 'tableView')
         self.model = QtGui.QStandardItemModel(None)
@@ -24,7 +26,8 @@ class Ui(QtWidgets.QMainWindow):
         fileName, _  = QtWidgets.QFileDialog.getOpenFileName(None, "Open CSV",
             (QtCore.QDir.homePath()), "CSV (*.csv)")
         if fileName:
-            print(fileName)
+            self.fileName = fileName
+            print(self.fileName)
             ff = open(fileName, 'r')
             text = ff.read()
             ff.close()
@@ -38,6 +41,15 @@ class Ui(QtWidgets.QMainWindow):
                         items = [QtGui.QStandardItem(field) for field in row]
                         self.model.appendRow(items)
                     self.tableView.resizeColumnsToContents()
+    
+    def hashData(self):
+        if self.fileName is None:
+            msg = QtWidgets.QMessageBox()
+            msg.setWindowTitle('Warning')
+            msg.setText('No data has been loaded!')
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            x = msg.exec_()
+        pass
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
