@@ -49,6 +49,12 @@ class Ui(QtWidgets.QMainWindow):
             msg.setText('No data has been loaded!')
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             x = msg.exec_()
+        else:
+            msg = QtWidgets.QMessageBox()
+            msg.setWindowTitle('Hashing data')
+            msg.setText('Data is being hashed.')
+            msg.setIcon(QtWidgets.QMessageBox.Information)
+            x = msg.exec_()
         pass
 
 if __name__ == "__main__":
