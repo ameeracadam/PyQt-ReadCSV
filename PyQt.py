@@ -189,7 +189,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 new_i = []
                 n = i.split(' ')
                 for i in n:
-                    if any(char.isdigit() for char in i):
+                    if any((len(i)>5) and char.isdigit() for char in i):
                         i = re.sub(pattern, 'xxxxx', i)
                     new_i.append(i)
                     new = ' '.join(new_i)
