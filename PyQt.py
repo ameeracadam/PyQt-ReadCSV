@@ -88,7 +88,6 @@ class MyWindow(QtWidgets.QMainWindow):
         self.tableView.setShowGrid(True)
         self.tableView.setGeometry(10, 50, 780, 645)
         self.model.dataChanged.connect(self.finishedEdit)
-        
 
         self.pushButtonLoad = QtWidgets.QPushButton(self)
         self.pushButtonLoad.setText("Load CSV")
@@ -108,6 +107,13 @@ class MyWindow(QtWidgets.QMainWindow):
         self.pushButtonPreview.clicked.connect(self.hashData)
         self.pushButtonPreview.setFixedWidth(80)
         self.pushButtonPreview.move(180,0)
+        self.pushButtonPreview.setStyleSheet(stylesheet(self))
+
+        self.pushButtonPreview = QtWidgets.QPushButton(self)
+        self.pushButtonPreview.setText("Try This")
+        self.pushButtonPreview.clicked.connect(self.tryThis)
+        self.pushButtonPreview.setFixedWidth(80)
+        self.pushButtonPreview.move(270,0)
         self.pushButtonPreview.setStyleSheet(stylesheet(self))
  
         item = QtGui.QStandardItem()
@@ -170,7 +176,9 @@ class MyWindow(QtWidgets.QMainWindow):
     
     def hashData(self):
         model = self.model
-        self.tableWidget = QtWidgets.QTableWidget(self)
+        self.tableWidget = QtWidgets.QTableWidget()
+        numRows = self.tableWidget.rowCount()
+        self.tableWidget.insertRow(numRows)
         pattern = '[a-zA-Z0-9]+'
         for row in range(model.rowCount()):
             data = []
@@ -185,14 +193,21 @@ class MyWindow(QtWidgets.QMainWindow):
                         i = re.sub(pattern, 'xxxxx', i)
                     new_i.append(i)
                     new = ' '.join(new_i)
-                new = QtWidgets.QTableWidgetItem(new)
+                #new = QtWidgets.QTableWidgetItem(new)
                 print(index.row(), index.column(), new)
-                #self.model.item(index.row(),index.column()).setText(new)
-                self.tableWidget.setItem(int(index.row()), int(index.column()), new)
- 
+                self.model.item(int(index.row()), int(index.column())).setText(new)
+                #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
+            self.tableView.resizeColumnsToContents()
+        self.isChanged = True
+
+    def tryThis(self):
+        self.model.item(1,1).setText("henlo")
+
 
     def finishedEdit(self):
+        self.tableView = TableWidgetDragRows()
         self.tableView.resizeColumnsToContents()
+
 
 def stylesheet(self):
        return
@@ -203,7 +218,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setApplicationName('MyWindow')
     main = MyWindow('')
-    main.setMinimumSize(820, 300)
+    main.setMinimumSize(820, 820)
     main.setWindowTitle("CSV Viewer")
     main.show()
 
