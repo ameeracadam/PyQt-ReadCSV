@@ -17,78 +17,21 @@ from PyQt5.QtCore import (QFile, QSettings, Qt, QFileInfo, QItemSelectionModel, 
 from PyQt5.QtWidgets import (QMainWindow , QAction, QWidget, QLineEdit, QMessageBox, QAbstractItemView, QApplication, 
                                                             QTableWidget, QTableWidgetItem, QGridLayout, QFileDialog, QMenu, QInputDialog, QPushButton)
 
-
-class TableWidgetDragRows(QTableWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.setDragEnabled(True)
-        self.setAcceptDrops(True)
-        self.viewport().setAcceptDrops(True)
-        self.setDragDropOverwriteMode(False)
-        self.setDropIndicatorShown(True)
-
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.setDragDropMode(QAbstractItemView.InternalMove)
-
-    def dropEvent(self, event: QDropEvent):
-        if not event.isAccepted() and event.source() == self:
-            drop_row = self.drop_on(event)
-
-            rows = sorted(set(item.row() for item in self.selectedItems()))
-            rows_to_move = [[QTableWidgetItem(self.item(row_index, column_index)) for column_index in range(self.columnCount())]
-                            for row_index in rows]
-            for row_index in reversed(rows):
-                self.removeRow(row_index)
-                if row_index < drop_row:
-                    drop_row -= 1
-
-            for row_index, data in enumerate(rows_to_move):
-                row_index += drop_row
-                self.insertRow(row_index)
-                for column_index, column_data in enumerate(data):
-                    self.setItem(row_index, column_index, column_data)
-            event.accept()
-            for row_index in range(len(rows_to_move)):
-                self.item(drop_row + row_index, 0).setSelected(True)
-                self.item(drop_row + row_index, 1).setSelected(True)
-        super().dropEvent(event)
-
-    def drop_on(self, event):
-        index = self.indexAt(event.pos())
-        if not index.isValid():
-            return self.rowCount()
-
-        return index.row() + 1 if self.is_below(event.pos(), index) else index.row()
-
-    def is_below(self, pos, index):
-        rect = self.visualRect(index)
-        margin = 2
-        if pos.y() - rect.top() < margin:
-            return False
-        elif rect.bottom() - pos.y() < margin:
-            return True
-        # noinspection PyTypeChecker
-        return rect.contains(pos, True) and not (int(self.model().flags(index)) & Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
-
-class MyWindow(QtWidgets.QMainWindow):
-    def __init__(self, aPath, parent=None):
-        super(MyWindow, self).__init__()
-
-        self.tableView = TableWidgetDragRows()
+class MyWindow(QtWidgets.QWidget):
+    def __init__(self, fileName, parent=None):
+        super(MyWindow, self).__init__(parent)
         self.fileName = ""
         self.fname = "List"
-        self.model = QtGui.QStandardItemModel(self)
-        
+        self.model =  QtGui.QStandardItemModel(self)
+
         self.tableView = QtWidgets.QTableView(self)
         self.tableView.setStyleSheet(stylesheet(self))
         self.tableView.setModel(self.model)
         self.tableView.horizontalHeader().setStretchLastSection(True)
         self.tableView.setShowGrid(True)
         self.tableView.setGeometry(10, 50, 780, 645)
-        self.model.dataChanged.connect(self.finishedEdit)
-
+        #self.model.dataChanged.connect(self.finishedEdit)
+        
         self.pushButtonLoad = QtWidgets.QPushButton(self)
         self.pushButtonLoad.setText("Load CSV")
         self.pushButtonLoad.clicked.connect(self.loadCsv)
@@ -103,19 +46,19 @@ class MyWindow(QtWidgets.QMainWindow):
         self.pushButtonWrite.setStyleSheet(stylesheet(self))
 
         self.pushButtonPreview = QtWidgets.QPushButton(self)
-        self.pushButtonPreview.setText("Hash Data")
-        self.pushButtonPreview.clicked.connect(self.hashData)
+        self.pushButtonPreview.setText("Hash All Data")
+        self.pushButtonPreview.clicked.connect(self.hashAllData)
         self.pushButtonPreview.setFixedWidth(80)
         self.pushButtonPreview.move(180,0)
         self.pushButtonPreview.setStyleSheet(stylesheet(self))
 
         self.pushButtonPreview = QtWidgets.QPushButton(self)
-        self.pushButtonPreview.setText("Try This")
-        self.pushButtonPreview.clicked.connect(self.tryThis)
-        self.pushButtonPreview.setFixedWidth(80)
+        self.pushButtonPreview.setText("Hash Selected Column")
+        self.pushButtonPreview.clicked.connect(self.hashColumn)
+        self.pushButtonPreview.setFixedWidth(120)
         self.pushButtonPreview.move(270,0)
         self.pushButtonPreview.setStyleSheet(stylesheet(self))
- 
+
         item = QtGui.QStandardItem()
         self.model.appendRow(item)
         self.model.setData(self.model.index(0, 0), "", 0)
@@ -144,13 +87,7 @@ class MyWindow(QtWidgets.QMainWindow):
                    self.tableView.resizeColumnsToContents()
                    self.tableView.resizeRowsToContents()
                    print("File Loaded")
-                   #self.setCurrentFile(fileName)
     
-    def setCurrentFile(self, fileName):
-        for widget in QApplication.topLevelWidgets():
-            if isinstance(widget, MyWindow):
-                widget.updateRecentFileActions()
-
     def writeCsv(self, fileName):
        # find empty cells
        for row in range(self.model.rowCount()):
@@ -173,12 +110,12 @@ class MyWindow(QtWidgets.QMainWindow):
                    writer.writerow(fields)
                self.fname = os.path.splitext(str(fileName))[0].split("/")[-1]
                self.setWindowTitle(self.fname)
-    
-    def hashData(self):
+
+    def hashAllData(self):
         model = self.model
         self.tableWidget = QtWidgets.QTableWidget()
-        numRows = self.tableWidget.rowCount()
-        self.tableWidget.insertRow(numRows)
+        # numRows = self.tableWidget.rowCount()
+        # self.tableWidget.insertRow(numRows)
         pattern = '[a-zA-Z0-9]+'
         for row in range(model.rowCount()):
             data = []
@@ -198,15 +135,38 @@ class MyWindow(QtWidgets.QMainWindow):
                 self.model.item(int(index.row()), int(index.column())).setText(new)
                 #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
             self.tableView.resizeColumnsToContents()
-        self.isChanged = True
 
-    def tryThis(self):
-        self.model.item(1,1).setText("henlo")
+    def hashColumn(self):
+        model = self.model
+        #model = QtGui.QStandardItemModel()
+        # self.listwidget = QtWidgets.QListWidget()
+        pattern = '[a-zA-Z0-9]+'
+        column = self.tableView.selectionModel().selectedColumns()
+        for index in column:
+            col_num = index.column()
+            print(col_num)
+
+        for row in range(model.rowCount()):
+            data = []
+            for column in range(model.columnCount()):
+                to_list = []
+                index = model.index(row, column)
+                i = index.data()
+                new_i = []
+                n = i.split(' ')
+                if index.column() == col_num:
+                    for i in n:
+                        if any((len(i)>5) and char.isdigit() for char in i):
+                            i = re.sub(pattern, 'xxxxx', i)
+                        new_i.append(i)
+                        new = ' '.join(new_i)
+                    #new = QtWidgets.QTableWidgetItem(new)
+                    print(index.row(), index.column(), new)
+                    self.model.item(int(index.row()), int(index.column())).setText(new)
+                    #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
+                self.tableView.resizeColumnsToContents()
 
 
-    def finishedEdit(self):
-        self.tableView = TableWidgetDragRows()
-        self.tableView.resizeColumnsToContents()
 
 
 def stylesheet(self):
