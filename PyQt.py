@@ -1,3 +1,4 @@
+import sys
 import csv, codecs 
 import os
 import io
@@ -17,9 +18,16 @@ from PyQt5.QtCore import (QFile, QSettings, Qt, QFileInfo, QItemSelectionModel, 
 from PyQt5.QtWidgets import (QMainWindow , QAction, QWidget, QLineEdit, QMessageBox, QAbstractItemView, QApplication, 
                                                             QTableWidget, QTableWidgetItem, QGridLayout, QFileDialog, QMenu, QInputDialog, QPushButton)
 
-class MyWindow(QtWidgets.QWidget):
-    def __init__(self, fileName, parent=None):
-        super(MyWindow, self).__init__(parent)
+class Example(QMainWindow):
+    
+    def __init__(self):
+        super().__init__()
+        
+        self.initUI()
+        
+        
+    def initUI(self): 
+
         self.fileName = ""
         self.fname = "List"
         self.model =  QtGui.QStandardItemModel(self)
@@ -29,42 +37,37 @@ class MyWindow(QtWidgets.QWidget):
         self.tableView.setModel(self.model)
         self.tableView.horizontalHeader().setStretchLastSection(True)
         self.tableView.setShowGrid(True)
-        self.tableView.setGeometry(10, 50, 780, 645)
-        #self.model.dataChanged.connect(self.finishedEdit)
+        self.tableView.setGeometry(10, 50, 780, 645)        
         
-        self.pushButtonLoad = QtWidgets.QPushButton(self)
-        self.pushButtonLoad.setText("Load CSV")
-        self.pushButtonLoad.clicked.connect(self.loadCsv)
-        self.pushButtonLoad.setFixedWidth(80)
-        self.pushButtonLoad.setStyleSheet(stylesheet(self))
+        mainMenu = self.menuBar()
+        fileMenu = mainMenu.addMenu('&File')
+        load_csv = QtWidgets.QAction('Load', self)
+        save_csv = QtWidgets.QAction('Save', self)
+        fileMenu.addAction(load_csv)
+        fileMenu.addAction(save_csv)
 
-        self.pushButtonWrite = QtWidgets.QPushButton(self)
-        self.pushButtonWrite.setText("Save CSV")
-        self.pushButtonWrite.clicked.connect(self.writeCsv)
-        self.pushButtonWrite.setFixedWidth(80)
-        self.pushButtonWrite.move(90,0)
-        self.pushButtonWrite.setStyleSheet(stylesheet(self))
+        load_csv.triggered.connect(self.loadCsv)
+        save_csv.triggered.connect(self.writeCsv)
 
-        self.pushButtonPreview = QtWidgets.QPushButton(self)
-        self.pushButtonPreview.setText("Hash All Data")
-        self.pushButtonPreview.clicked.connect(self.hashAllData)
-        self.pushButtonPreview.setFixedWidth(80)
-        self.pushButtonPreview.move(180,0)
-        self.pushButtonPreview.setStyleSheet(stylesheet(self))
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('Hash')
+        
+        hashReg = QtWidgets.QMenu('Regular Expression', self)
+        hashAll = QtWidgets.QAction('Hash All', self) 
+        hashCol = QtWidgets.QAction('Hash Selected Column', self)
+        hashReg.addAction(hashAll)     
+        hashReg.addAction(hashCol)
 
-        self.pushButtonPreview = QtWidgets.QPushButton(self)
-        self.pushButtonPreview.setText("Hash Selected Column")
-        self.pushButtonPreview.clicked.connect(self.hashColumn)
-        self.pushButtonPreview.setFixedWidth(120)
-        self.pushButtonPreview.move(270,0)
-        self.pushButtonPreview.setStyleSheet(stylesheet(self))
+        hashAll.triggered.connect(self.hashAllData)
+        hashCol.triggered.connect(self.hashColumn)
+        
+        fileMenu.addMenu(hashReg)
 
-        item = QtGui.QStandardItem()
-        self.model.appendRow(item)
-        self.model.setData(self.model.index(0, 0), "", 0)
-        self.tableView.resizeColumnsToContents()
-
-
+        self.setMinimumSize(820,820)
+        self.setWindowTitle('PyQy Hash')    
+        self.show()
+    
+    
     def loadCsv(self, fileName):
        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV",
                (QtCore.QDir.homePath()), "CSV (*.csv)")
@@ -87,7 +90,7 @@ class MyWindow(QtWidgets.QWidget):
                    self.tableView.resizeColumnsToContents()
                    self.tableView.resizeRowsToContents()
                    print("File Loaded")
-    
+
     def writeCsv(self, fileName):
        # find empty cells
        for row in range(self.model.rowCount()):
@@ -166,20 +169,12 @@ class MyWindow(QtWidgets.QWidget):
                     #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
                 self.tableView.resizeColumnsToContents()
 
-
-
-
 def stylesheet(self):
        return
-
-if __name__ == "__main__":
-    import sys
-
+        
+        
+if __name__ == '__main__':
+    
     app = QApplication(sys.argv)
-    app.setApplicationName('MyWindow')
-    main = MyWindow('')
-    main.setMinimumSize(820, 820)
-    main.setWindowTitle("CSV Viewer")
-    main.show()
-
-sys.exit(app.exec_())
+    ex = Example()
+    sys.exit(app.exec_())
