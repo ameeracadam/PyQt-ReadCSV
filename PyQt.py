@@ -53,14 +53,25 @@ class Example(QMainWindow):
         fileMenu = menubar.addMenu('Hash')
         
         hashReg = QtWidgets.QMenu('Regular Expression', self)
-        hashAll = QtWidgets.QAction('Hash All', self) 
-        hashCol = QtWidgets.QAction('Hash Selected Column', self)
-        hashReg.addAction(hashAll)     
-        hashReg.addAction(hashCol)
+        hashRegAll = QtWidgets.QAction('Hash All', self) 
+        hashRegCol = QtWidgets.QAction('Hash Selected Column', self)
+        hashReg.addAction(hashRegAll)     
+        hashReg.addAction(hashRegCol)
 
-        hashAll.triggered.connect(self.hashAllData)
-        hashCol.triggered.connect(self.hashColumn)
-        
+        hashRegAll.triggered.connect(self.hashRegExp_all)
+        hashRegCol.triggered.connect(self.hashRegExp_col)
+
+
+        hashPy = QtWidgets.QMenu('Python Hashing', self)
+        hashPyAll = QtWidgets.QAction('Hash All', self) 
+        hashPyCol = QtWidgets.QAction('Hash Selected Column', self)
+        hashPy.addAction(hashPyAll)     
+        hashPy.addAction(hashPyCol)
+
+        hashPyAll.triggered.connect(self.hashPy_all)
+        hashPyCol.triggered.connect(self.hashPy_col)
+
+        fileMenu.addMenu(hashPy)
         fileMenu.addMenu(hashReg)
 
         self.setMinimumSize(820,820)
@@ -114,7 +125,7 @@ class Example(QMainWindow):
                self.fname = os.path.splitext(str(fileName))[0].split("/")[-1]
                self.setWindowTitle(self.fname)
 
-    def hashAllData(self):
+    def hashRegExp_all(self):
         model = self.model
         self.tableWidget = QtWidgets.QTableWidget()
         # numRows = self.tableWidget.rowCount()
@@ -139,7 +150,7 @@ class Example(QMainWindow):
                 #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
             self.tableView.resizeColumnsToContents()
 
-    def hashColumn(self):
+    def hashRegExp_col(self):
         model = self.model
         #model = QtGui.QStandardItemModel()
         # self.listwidget = QtWidgets.QListWidget()
@@ -168,6 +179,62 @@ class Example(QMainWindow):
                     self.model.item(int(index.row()), int(index.column())).setText(new)
                     #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
                 self.tableView.resizeColumnsToContents()
+
+    def hashPy_all(self):
+        model = self.model
+        self.tableWidget = QtWidgets.QTableWidget()
+        # numRows = self.tableWidget.rowCount()
+        # self.tableWidget.insertRow(numRows)
+        pattern = '[a-zA-Z0-9]+'
+        for row in range(model.rowCount()):
+            data = []
+            for column in range(model.columnCount()):
+                to_list = []
+                index = model.index(row, column)
+                i = index.data()
+                new_i = []
+                n = i.split(' ')
+                for i in n:
+                    if any((len(i)>5) and char.isdigit() for char in i):
+                        i = re.sub(pattern, str(hash(i)), i)
+                    new_i.append(i)
+                    new = ' '.join(new_i)
+                #new = QtWidgets.QTableWidgetItem(new)
+                print(index.row(), index.column(), new)
+                self.model.item(int(index.row()), int(index.column())).setText(new)
+                #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
+            self.tableView.resizeColumnsToContents()
+
+    def hashPy_col(self):
+        model = self.model
+        #model = QtGui.QStandardItemModel()
+        # self.listwidget = QtWidgets.QListWidget()
+        pattern = '[a-zA-Z0-9]+'
+        column = self.tableView.selectionModel().selectedColumns()
+        for index in column:
+            col_num = index.column()
+            print(col_num)
+
+        for row in range(model.rowCount()):
+            data = []
+            for column in range(model.columnCount()):
+                to_list = []
+                index = model.index(row, column)
+                i = index.data()
+                new_i = []
+                n = i.split(' ')
+                if index.column() == col_num:
+                    for i in n:
+                        if any((len(i)>5) and char.isdigit() for char in i):
+                            i = re.sub(pattern, str(hash(i)), i)
+                        new_i.append(i)
+                        new = ' '.join(new_i)
+                    #new = QtWidgets.QTableWidgetItem(new)
+                    print(index.row(), index.column(), new)
+                    self.model.item(int(index.row()), int(index.column())).setText(new)
+                    #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
+                self.tableView.resizeColumnsToContents()
+
 
 def stylesheet(self):
        return
