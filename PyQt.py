@@ -87,7 +87,7 @@ class Example(QMainWindow):
         fileMenu.addMenu(hash_sha1)
 
         self.setMinimumSize(820,820)
-        self.setWindowTitle('PyQy Hash')    
+        self.setWindowTitle('PyQt Hash')    
         self.show()
     
     
