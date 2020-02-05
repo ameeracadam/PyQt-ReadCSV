@@ -6,6 +6,7 @@ import re
 import pandas as pd
 import numpy as np
 import csv
+import hashlib
 from PyQt5 import QtPrintSupport
 
 from PyQt5 import QtCore, QtGui, QtWidgets, QtPrintSupport
@@ -23,6 +24,7 @@ from PyQt5.QtWidgets import (QMainWindow , QAction, QWidget, QLineEdit, QMessage
 class HashingWindow(QtWidgets.QWidget):
     hashRegEx = QtCore.pyqtSignal()
     hashPy = QtCore.pyqtSignal()
+    hash_sha1 = QtCore.pyqtSignal()
 
     def __init__(self):
         super(HashingWindow, self).__init__()
@@ -32,13 +34,16 @@ class HashingWindow(QtWidgets.QWidget):
 
         RegExp_btn = QtWidgets.QPushButton("Hash RegExp")
         PyHash_btn = QtWidgets.QPushButton("Use Python Hashing")
+        Hash_sha1_btn = QtWidgets.QPushButton("Use sha1 Hashing")
 
         RegExp_btn.clicked.connect(self.RegExHashing)
         PyHash_btn.clicked.connect(self.PyHashing)
+        Hash_sha1_btn.clicked.connect(self.sha1_Hashing)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(RegExp_btn)
         layout.addWidget(PyHash_btn)
+        layout.addWidget(Hash_sha1_btn)
 
         self.setLayout(layout)
         self.setWindowTitle("Hashing Options")
@@ -51,6 +56,9 @@ class HashingWindow(QtWidgets.QWidget):
     
     def PyHashing(self):
         self.hashPy.emit()
+
+    def sha1_Hashing(self):
+        self.hash_sha1.emit()
 
     
 class Window(QtWidgets.QWidget):
@@ -95,6 +103,7 @@ class Window(QtWidgets.QWidget):
         self.hashopt = HashingWindow()
         self.hashopt.hashRegEx.connect(self.hash_RegEx)
         self.hashopt.hashPy.connect(self.print_hashpy)
+        self.hashopt.hash_sha1.connect(self.sha1_Hashing)
 
         self.hashBtn = QtWidgets.QPushButton(self)
         self.hashBtn.setText("Hash Selected Data")
@@ -276,6 +285,70 @@ class Window(QtWidgets.QWidget):
                         for i in n:
                             if any((len(i)>5) and char.isdigit() for char in i):
                                 i = re.sub(pattern, str(hash(i)), i)
+                            new_i.append(i)
+                            new = ' '.join(new_i)
+                        #new = QtWidgets.QTableWidgetItem(new)
+                        #print(index.row(), index.column(), new)
+                        self.model.item(int(index.row()), int(index.column())).setText(new)
+                        #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
+                    self.tableView.resizeColumnsToContents()
+            print("Hashed Selected Column")
+    
+    def sha1_Hashing(self):
+        m = hashlib.sha1()
+        model = self.model
+        self.tableWidget = QtWidgets.QTableWidget()
+        selected_col = self.emptybox.itemText(self.emptybox.currentIndex())
+        pattern = '[a-zA-Z0-9]+'
+        if (selected_col == "All Columns"):
+            print("Hashing All Columns")
+        # numRows = self.tableWidget.rowCount()
+        # self.tableWidget.insertRow(numRows)
+            for row in range(model.rowCount()):
+                data = []
+                for column in range(model.columnCount()):
+                    to_list = []
+                    index = model.index(row, column)
+                    i = index.data()
+                    new_i = []
+                    n = i.split(' ')
+                    for i in n:
+                        if any((len(i)>5) and char.isdigit() for char in i):
+                            encoded = i.encode()
+                            m.update(encoded)
+                            hashed = m.hexdigest()
+                            i = re.sub(pattern, hashed, i)
+                        new_i.append(i)
+                        new = ' '.join(new_i)
+                    #new = QtWidgets.QTableWidgetItem(new)
+                    #print(index.row(), index.column(), new)
+                    self.model.item(int(index.row()), int(index.column())).setText(new)
+                    #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
+                self.tableView.resizeColumnsToContents()
+            print("Hashed All Columns")
+        else:
+            print("Hashing column:", selected_col)
+            for column in range(model.columnCount()):
+                index = model.index(0, column)
+                i = index.data()
+                if (i == selected_col):
+                    col_num = index.column()
+
+            for row in range(model.rowCount()):
+                data = []
+                for column in range(model.columnCount()):
+                    to_list = []
+                    index = model.index(row, column)
+                    i = index.data()
+                    new_i = []
+                    n = i.split(' ')
+                    if index.column() == col_num:
+                        for i in n:
+                            if any((len(i)>5) and char.isdigit() for char in i):
+                                encoded = i.encode()
+                                m.update(encoded)
+                                hashed = m.hexdigest()
+                                i = re.sub(pattern, hashed, i)
                             new_i.append(i)
                             new = ' '.join(new_i)
                         #new = QtWidgets.QTableWidgetItem(new)
