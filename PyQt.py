@@ -20,16 +20,44 @@ from PyQt5.QtCore import (QFile, QSettings, Qt, QFileInfo, QItemSelectionModel, 
 from PyQt5.QtWidgets import (QMainWindow , QAction, QWidget, QLineEdit, QMessageBox, QAbstractItemView, QApplication, 
                                                             QTableWidget, QTableWidgetItem, QGridLayout, QFileDialog, QMenu, QInputDialog, QPushButton)
 
-class Example(QMainWindow):
-    
-    def __init__(self):
-        super().__init__()
-        
-        self.initUI()
-        
-        
-    def initUI(self): 
 
+class HashingWindow(QtWidgets.QWidget):
+    hashRegEx = QtCore.pyqtSignal()
+    hashPy = QtCore.pyqtSignal()
+
+    def __init__(self):
+        super(HashingWindow, self).__init__()
+        
+        RegExp_btn = QtWidgets.QPushButton("Hash RegExp")
+        PyHash_btn = QtWidgets.QPushButton("Use Python Hashing")
+
+        RegExp_btn.clicked.connect(self.RegExHashing)
+        PyHash_btn.clicked.connect(self.PyHashing)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(RegExp_btn)
+        layout.addWidget(PyHash_btn)
+
+        self.setLayout(layout)
+        self.setWindowTitle("Hashing Options")
+        self.setMinimumWidth(350)
+
+    def RegExHashing(self):
+        self.hashRegEx.emit()
+    
+    def PyHashing(self):
+        self.hashPy.emit()
+
+    
+class Window(QtWidgets.QWidget):
+    def __init__(self):
+        super(Window, self).__init__()
+
+        self.initUI()
+
+    def initUI(self):
+
+        ##Load and Save Buttons##
         self.fileName = ""
         self.fname = "List"
         self.model =  QtGui.QStandardItemModel(self)
@@ -41,57 +69,38 @@ class Example(QMainWindow):
         self.tableView.setShowGrid(True)
         self.tableView.setGeometry(10, 50, 780, 645)        
         
-        mainMenu = self.menuBar()
-        fileMenu = mainMenu.addMenu('&File')
-        load_csv = QtWidgets.QAction('Load', self)
-        save_csv = QtWidgets.QAction('Save', self)
-        fileMenu.addAction(load_csv)
-        fileMenu.addAction(save_csv)
-
-        load_csv.triggered.connect(self.loadCsv)
-        save_csv.triggered.connect(self.writeCsv)
-
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('Hash')
+        self.pushButtonLoad = QtWidgets.QPushButton(self)
+        self.pushButtonLoad.setText('Load File')
+        self.pushButtonLoad.clicked.connect(self.loadCSV)
+        self.pushButtonLoad.setFixedWidth(80)
+        self.pushButtonLoad.move(10,10)
+        self.pushButtonLoad.setStyleSheet(stylesheet(self))
         
-        hashReg = QtWidgets.QMenu('Regular Expression', self)
-        hashRegAll = QtWidgets.QAction('Hash All', self) 
-        hashRegCol = QtWidgets.QAction('Hash Selected Column', self)
-        hashReg.addAction(hashRegAll)     
-        hashReg.addAction(hashRegCol)
+        self.pushButtonSave = QtWidgets.QPushButton(self)
+        self.pushButtonSave.setText('Save File')
+        self.pushButtonSave.clicked.connect(self.saveCSV)
+        self.pushButtonSave.setFixedWidth(80)
+        self.pushButtonSave.move(100,10)
+        self.pushButtonSave.setStyleSheet(stylesheet(self))
 
-        hashRegAll.triggered.connect(self.hashRegExp_all)
-        hashRegCol.triggered.connect(self.hashRegExp_col)
+        ##Create Button for Hashing Window##
+        self.hashopt = HashingWindow()
+        self.hashopt.hashRegEx.connect(self.hash_RegEx)
+        self.hashopt.hashPy.connect(self.print_hashpy)
 
-
-        hashPy = QtWidgets.QMenu('Python Hashing', self)
-        hashPyAll = QtWidgets.QAction('Hash All', self) 
-        hashPyCol = QtWidgets.QAction('Hash Selected Column', self)
-        hashPy.addAction(hashPyAll)     
-        hashPy.addAction(hashPyCol)
-
-        hashPyAll.triggered.connect(self.hashPy_all)
-        hashPyCol.triggered.connect(self.hashPy_col)
-
-        hash_sha1 = QtWidgets.QMenu('sha1 Hashing', self)
-        hash_sha1_All = QtWidgets.QAction('Hash All', self) 
-        hash_sha1_Col = QtWidgets.QAction('Hash Selected Column', self)
-        hash_sha1.addAction(hash_sha1_All)     
-        hash_sha1.addAction(hash_sha1_Col)
-
-        # hash_sha1_All.triggered.connect(self.hash_sha1_all)
-        # hash_sha1_Col.triggered.connect(self.hash_sha1_col)
-
-        fileMenu.addMenu(hashPy)
-        fileMenu.addMenu(hashReg)
-        fileMenu.addMenu(hash_sha1)
+        self.hashBtn = QtWidgets.QPushButton(self)
+        self.hashBtn.setText("Select Hashing Option")
+        self.hashBtn.clicked.connect(self.get_options)
+        self.hashBtn.setFixedWidth(150)
+        self.hashBtn.move(10,700)
+        self.hashBtn.setStyleSheet(stylesheet(self))
+        
 
         self.setMinimumSize(820,820)
-        self.setWindowTitle('PyQy Hash')    
+        self.setWindowTitle('PyQt Hash')    
         self.show()
-    
-    
-    def loadCsv(self, fileName):
+
+    def loadCSV(self, filename):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV",
                (QtCore.QDir.homePath()), "CSV (*.csv)")
  
@@ -113,8 +122,8 @@ class Example(QMainWindow):
                     self.tableView.resizeColumnsToContents()
                     self.tableView.resizeRowsToContents()
                     print("File Loaded")
-
-    def writeCsv(self, fileName):
+    
+    def saveCSV(self, fileName):
        # find empty cells
         for row in range(self.model.rowCount()):
             for column in range(self.model.columnCount()):
@@ -136,14 +145,12 @@ class Example(QMainWindow):
                     writer.writerow(fields)
                 self.fname = os.path.splitext(str(fileName))[0].split("/")[-1]
                 self.setWindowTitle(self.fname)
-        
-        # if hashed_indexes(hashed_indexes) is not None:
-        #     hashed_array = np.asarray(hashed_indexes)
-        #     print(type(hashed_array))
-        #     hashed_array.to_csv((QtCore.QDir.homePath() + "/" + self.fname + "indexes.csv"))
     
 
-    def hashRegExp_all(self):
+    def get_options(self):
+        self.hashopt.show()
+
+    def hash_RegEx(self):
         model = self.model
         self.tableWidget = QtWidgets.QTableWidget()
         # numRows = self.tableWidget.rowCount()
@@ -163,43 +170,14 @@ class Example(QMainWindow):
                     new_i.append(i)
                     new = ' '.join(new_i)
                 #new = QtWidgets.QTableWidgetItem(new)
-                print(index.row(), index.column(), new)
+                #print(index.row(), index.column(), new)
                 self.model.item(int(index.row()), int(index.column())).setText(new)
                 #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
             self.tableView.resizeColumnsToContents()
+        print("Hashed All")
         
 
-    def hashRegExp_col(self):
-        model = self.model
-        #model = QtGui.QStandardItemModel()
-        # self.listwidget = QtWidgets.QListWidget()
-        pattern = '[a-zA-Z0-9]+'
-        column = self.tableView.selectionModel().selectedColumns()
-        for index in column:
-            col_num = index.column()
-            print(col_num)
-
-        for row in range(model.rowCount()):
-            data = []
-            for column in range(model.columnCount()):
-                to_list = []
-                index = model.index(row, column)
-                i = index.data()
-                new_i = []
-                n = i.split(' ')
-                if index.column() == col_num:
-                    for i in n:
-                        if any((len(i)>5) and char.isdigit() for char in i):
-                            i = re.sub(pattern, 'xxxxx', i)
-                        new_i.append(i)
-                        new = ' '.join(new_i)
-                    #new = QtWidgets.QTableWidgetItem(new)
-                    print(index.row(), index.column(), new)
-                    self.model.item(int(index.row()), int(index.column())).setText(new)
-                    #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
-                self.tableView.resizeColumnsToContents()
-
-    def hashPy_all(self):
+    def print_hashpy(self):
         model = self.model
         self.tableWidget = QtWidgets.QTableWidget()
         # numRows = self.tableWidget.rowCount()
@@ -221,49 +199,21 @@ class Example(QMainWindow):
                     new_i.append(i)
                     new = ' '.join(new_i)
                 #new = QtWidgets.QTableWidgetItem(new)
-                print(index.row(), index.column(), new)
+                #print(index.row(), index.column(), new)
                 self.model.item(int(index.row()), int(index.column())).setText(new)
                 #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
             self.tableView.resizeColumnsToContents()
-
-    def hashPy_col(self):
-        model = self.model
-        #model = QtGui.QStandardItemModel()
-        # self.listwidget = QtWidgets.QListWidget()
-        pattern = '[a-zA-Z0-9]+'
-        column = self.tableView.selectionModel().selectedColumns()
-        for index in column:
-            col_num = index.column()
-            print(col_num)
-
-        for row in range(model.rowCount()):
-            data = []
-            for column in range(model.columnCount()):
-                to_list = []
-                index = model.index(row, column)
-                i = index.data()
-                new_i = []
-                n = i.split(' ')
-                if index.column() == col_num:
-                    for i in n:
-                        if any((len(i)>5) and char.isdigit() for char in i):
-                            i = re.sub(pattern, str(hash(i)), i)
-                        new_i.append(i)
-                        new = ' '.join(new_i)
-                    #new = QtWidgets.QTableWidgetItem(new)
-                    print(index.row(), index.column(), new)
-                    self.model.item(int(index.row()), int(index.column())).setText(new)
-                    #self.tableWidget.setItem(int(index.row()), int(index.column()), new)
-                self.tableView.resizeColumnsToContents()
+        print("Hashed All")
     
-    
+
 
 def stylesheet(self):
        return
-        
-        
-if __name__ == '__main__':
     
-    app = QApplication(sys.argv)
-    ex = Example()
+if __name__ == '__main__':
+
+    app = QtWidgets.QApplication(sys.argv)
+    window = Window()
+    window.show()
     sys.exit(app.exec_())
+
