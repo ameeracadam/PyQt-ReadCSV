@@ -180,7 +180,9 @@ class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
         model = self.model
         self.tableWidget = QtWidgets.QTableWidget()
         columns = value[0]
+        salt = str(value[2])
         for selected_col in columns:
+            print('With salt', salt)
             print('Hashing', selected_col)
             for column in range(model.columnCount()):
                 index = model.index(0, column)
@@ -188,9 +190,9 @@ class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
                 if (i == selected_col):
                     col_num = index.column()
                     hash_col = col_num
-                    self.start_hash(m, hash_col)
+                    self.start_hash(m, hash_col, salt)
     
-    def start_hash(self, m, hash_col):
+    def start_hash(self, m, hash_col, salt):
         model = self.model
         self.tableWidget = QtWidgets.QTableWidget()
         for row in range(model.rowCount()):
@@ -203,6 +205,7 @@ class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
                 n = i.split(' ')
                 if index.column() == hash_col:
                     for i in n:
+                        i = i + salt
                         encoded = i.encode()
                         m.update(encoded)
                         hashed = m.hexdigest()
@@ -300,7 +303,7 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         
         self.confirm_salt = QtWidgets.QPushButton(self)
         self.confirm_salt.setText('Confirm Salt')
-        #self.confirm_salt.clicked.connect(self.new_salt_window)
+        self.confirm_salt.clicked.connect(self.new_salt_window)
         self.confirm_salt.setFixedWidth(80)
         self.confirm_salt.move(200, 230)
         self.confirm_salt.setStyleSheet(stylesheet(self))
@@ -350,7 +353,65 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         values.append(selected_hash)
 
         print('Hashing Method:', selected_hash)
+
+        hashing_salt = self.set_salt.text()
+        print('Salt to use', hashing_salt)
+        values.append(hashing_salt)
         self.value.emit(values)
+
+    def new_salt_window(self):
+        model = self.model
+        salt = self.set_salt.text()
+        self.salt_window = newSaltWindow(salt)
+        self.salt_window.show()
+
+
+class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
+    
+    def __init__(self, salt, parent=None):
+        QtWidgets.QMainWindow.__init__(self)
+        self.salt = salt
+        self.subUI()
+    
+    def subUI(self):
+
+        self.model =  QtGui.QStandardItemModel(self)
+        
+        self.salt_text = QtWidgets.QLabel(self)
+        self.salt_text.setText('Type in salt')
+        self.salt_text.setFixedWidth(150)
+        self.salt_text.move(10,10)
+        self.salt_text.setStyleSheet(stylesheet(self))
+
+        self.salt_line = QtWidgets.QLineEdit(self)
+        self.salt_line.setEchoMode(QLineEdit.Password)
+        self.salt_line.setFixedWidth(100)
+        self.salt_line.move(50,40)
+        self.salt_line.setStyleSheet(stylesheet(self))
+
+        self.confirm_salt = QtWidgets.QPushButton(self)
+        self.confirm_salt.setText('Re-confirm Salt')
+        self.confirm_salt.clicked.connect(self.match_salt)
+        self.confirm_salt.setFixedWidth(150)
+        self.confirm_salt.move(25, 80)
+        self.confirm_salt.setStyleSheet(stylesheet(self))
+
+        self.setWindowTitle('Confirm Salt')
+        self.setMinimumSize(150,150)
+        self.show()
+    
+    def match_salt(self):
+        model = self.model
+        new_salt = self.salt_line.text()
+        initial_salt = self.salt
+
+        print(new_salt, initial_salt)
+
+        if (new_salt == initial_salt):
+            print('Salts match!')
+            self.close()
+        else:
+            print("Salts don't match. Try again.")
     
 
 def stylesheet(self):
