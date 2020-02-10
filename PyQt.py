@@ -315,6 +315,8 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.to_hash.move(10,280)
         self.to_hash.setStyleSheet(stylesheet(self))
 
+        self.can_hash = False
+
         self.setWindowTitle('Hashing Options')
         self.setMinimumSize(320,350)
         self.show()
@@ -338,35 +340,46 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
             item.setCheckState(QtCore.Qt.Unchecked)
 
         self.show()
-        
-    def hash_this(self):
-        values = []
-        columns = self.choices
-
-        values.append(columns)
-
-        print('You have chosen:')
-        for i in columns:
-            print(i)
-
-        selected_hash = self.hash_box.itemText(self.hash_box.currentIndex())
-        values.append(selected_hash)
-
-        print('Hashing Method:', selected_hash)
-
-        hashing_salt = self.set_salt.text()
-        print('Salt to use', hashing_salt)
-        values.append(hashing_salt)
-        self.value.emit(values)
 
     def new_salt_window(self):
         model = self.model
         salt = self.set_salt.text()
         self.salt_window = newSaltWindow(salt)
         self.salt_window.show()
+        self.can_hash = True
+
+    # def confirm_hash(self, message):
+    #     model = self.model
+    #     self.can_hash = True
+        
+    def hash_this(self):
+        model = self.model
+        if self.can_hash is False:
+            print('Please confirm hash')
+        if self.can_hash is True:
+            values = []
+            columns = self.choices
+
+            values.append(columns)
+
+            print('You have chosen:')
+            for i in columns:
+                print(i)
+
+            selected_hash = self.hash_box.itemText(self.hash_box.currentIndex())
+            values.append(selected_hash)
+
+            print('Hashing Method:', selected_hash)
+
+            hashing_salt = self.set_salt.text()
+            print('Salt to use', hashing_salt)
+            values.append(hashing_salt)
+            self.value.emit(values)
 
 
 class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
+
+    message = QtCore.pyqtSignal(str)
     
     def __init__(self, salt, parent=None):
         QtWidgets.QMainWindow.__init__(self)
@@ -409,6 +422,8 @@ class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
 
         if (new_salt == initial_salt):
             print('Salts match!')
+            msg = 'clicked!'
+            self.message.emit(msg)
             self.close()
         else:
             print("Salts don't match. Try again.")
