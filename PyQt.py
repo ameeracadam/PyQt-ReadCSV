@@ -21,6 +21,8 @@ from PyQt5.QtWidgets import (QMainWindow , QAction, QWidget, QLineEdit, QMessage
                                                             QTableWidget, QTableWidgetItem, QGridLayout, QFileDialog, QMenu, QInputDialog, QPushButton,
                                                             QLabel)
 
+from sklearn.model_selection import train_test_split, KFold
+
 class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -62,6 +64,13 @@ class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.hashOpt.setFixedWidth(80)
         self.hashOpt.move(10, 700)
         self.hashOpt.setStyle(stylesheet(self))
+
+        self.partData = QtWidgets.QPushButton(self)
+        self.partData.setText('Partition Data')
+        self.partData.clicked.connect(self.datasetPartition)
+        self.partData.setFixedWidth(80)
+        self.partData.move(100, 700)
+        self.partData.setStyleSheet(stylesheet(self))
 
         self.setMinimumSize(820,820)
         self.setWindowTitle('PyQt Hash')    
@@ -218,9 +227,40 @@ class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
         print("Hashed Selected Column")
 
         self.tableView.resizeColumnsToContents()
-        self.child_win.close()
+        self.child_win.close()   
 
+    def datasetPartition(self):
+        model = self.model
         
+        self.new_partition_window = datasetPartWin(model)
+        self.new_partition_window.show() 
+        self.new_partition_window.new_mod.connect(self.updateModel)   
+    
+    def updateModel(self, new_mod):
+        print('Model updating')
+        self.model.clear()
+        model = self.model
+        self.new_model = new_mod
+        new_model = self.new_model
+        self.tableWidget = QtWidgets.QTableWidget()
+
+        row_num = new_model.rowCount()
+        col_num = new_model.columnCount()
+        self.model.setRowCount(row_num)
+        self.model.setColumnCount(col_num)
+
+        for row in range(model.rowCount()):
+            for column in range(model.columnCount()):
+                index = new_model.index(row, column)
+                i = index.data()
+                n_row = int(row)
+                n_col = int(column)
+                self.model.setItem(n_row,n_col,QtGui.QStandardItem(str(i)))
+        
+        self.tableView.resizeColumnsToContents()
+        self.tableView.resizeRowsToContents()
+        print('Model Updated')
+
 
 
 class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
@@ -287,6 +327,7 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.hash_box.addItem('sha1')
         self.hash_box.addItem('sha256')
         self.hash_box.addItem('sha224')
+        self.hash_box.addItem('blake2b')
         self.hash_box.move(90, 180)
 
         self.set_salt = QtWidgets.QLineEdit(self)
@@ -309,13 +350,13 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.confirm_salt.setStyleSheet(stylesheet(self))
 
         self.to_hash = QtWidgets.QPushButton(self)
-        self.to_hash.setText("Confirm Options")
+        self.to_hash.setText("Hash!")
         self.to_hash.clicked.connect(self.hash_this)
         self.setFixedWidth(200)
         self.to_hash.move(10,280)
         self.to_hash.setStyleSheet(stylesheet(self))
 
-        self.can_hash = False
+        self.can_hash = True
 
         self.setWindowTitle('Hashing Options')
         self.setMinimumSize(320,350)
@@ -327,6 +368,7 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
                         range(self.model.rowCount())
                         if self.model.item(i).checkState()
                         == QtCore.Qt.Checked]
+
         print(self.choices)
 
     def select(self):
@@ -354,27 +396,24 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         
     def hash_this(self):
         model = self.model
-        if self.can_hash is False:
-            print('Please confirm hash')
-        if self.can_hash is True:
-            values = []
-            columns = self.choices
+        values = []
+        columns = self.choices
 
-            values.append(columns)
+        values.append(columns)
 
-            print('You have chosen:')
-            for i in columns:
-                print(i)
+        print('You have chosen:')
+        for i in columns:
+            print(i)
 
-            selected_hash = self.hash_box.itemText(self.hash_box.currentIndex())
-            values.append(selected_hash)
+        selected_hash = self.hash_box.itemText(self.hash_box.currentIndex())
+        values.append(selected_hash)
 
-            print('Hashing Method:', selected_hash)
+        print('Hashing Method:', selected_hash)
 
-            hashing_salt = self.set_salt.text()
-            print('Salt to use', hashing_salt)
-            values.append(hashing_salt)
-            self.value.emit(values)
+        hashing_salt = self.set_salt.text()
+        print('Salt to use', hashing_salt)
+        values.append(hashing_salt)
+        self.value.emit(values)
 
 
 class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
@@ -427,6 +466,258 @@ class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
             self.close()
         else:
             print("Salts don't match. Try again.")
+
+class datasetPartWin(QtWidgets.QMainWindow, QtWidgets.QWidget):
+
+    new_mod = QtCore.pyqtSignal('QStandardItemModel')
+    
+    def __init__(self, main_mod, parent=None):
+        QtWidgets.QMainWindow.__init__(self)
+        self.main_model = main_mod
+        self.model = QtGui.QStandardItemModel(self)
+        self.subUI()
+    
+    def subUI(self):
+
+        model = self.model
+        main_model = self.main_model
+        self.tableWidget = QtWidgets.QTableWidget()
+
+        row_num = main_model.rowCount()
+        col_num = main_model.columnCount()
+        self.model.setRowCount(row_num)
+        self.model.setColumnCount(col_num)
+
+        for row in range(model.rowCount()):
+            for column in range(model.columnCount()):
+                index = main_model.index(row, column)
+                i = index.data()
+                n_row = int(row)
+                n_col = int(column)
+                self.model.setItem(n_row,n_col,QtGui.QStandardItem(str(i)))
+
+        self.listView = QtWidgets.QListView()
+
+        self.tableView = QtWidgets.QTableView(self)
+        self.tableView.setStyleSheet(stylesheet(self))
+        self.tableView.setModel(self.model)
+        self.tableView.horizontalHeader().setStretchLastSection(True)
+        self.tableView.setShowGrid(True)
+        self.tableView.setGeometry(10, 10, 600, 600) 
+
+        self.tableView.resizeColumnsToContents()
+        self.tableView.resizeRowsToContents()
+
+        self.part_opt = QtWidgets.QComboBox(self)
+        self.part_opt.addItem('Random Split')
+        self.part_opt.addItem('Train Test Split')
+        self.part_opt.addItem('K-Fold')
+        self.part_opt.move(10,630)
+
+        self.pushButtonLoad = QtWidgets.QPushButton(self)
+        self.pushButtonLoad.setText('Load Options')
+        self.pushButtonLoad.clicked.connect(self.loadOptions)
+        self.pushButtonLoad.setFixedWidth(80)
+        self.pushButtonLoad.move(120,630)
+        self.pushButtonLoad.setStyleSheet(stylesheet(self))
+
+        self.confirm_model = QtWidgets.QPushButton(self)
+        self.confirm_model.setText('Confirm')
+        self.confirm_model.clicked.connect(self.confirmModel)
+        self.confirm_model.setFixedWidth(80)
+        self.confirm_model.move(120,670)
+        self.confirm_model.setStyleSheet(stylesheet(self))
+
+        self.setWindowTitle('Partioning Options')
+        self.setMinimumSize(700,750)
+        self.show()
+
+    def confirmModel(self):
+        model = self.model
+        self.new_mod.emit(model)
+        print('Model Emitted')
+
+    
+    def loadOptions(self):
+        model = self.model
+        option = self.part_opt.itemText(self.part_opt.currentIndex())
+
+        if option == 'Random Split':
+            #Create a random number generator and deletes rows whose greater than 0
+            for row in range(1, model.rowCount()):
+                random_n = np.random.randn()
+                if random_n <= 0.0 :
+                    model.removeRow(row)
+        
+        if option == 'Train Test Split':
+            #Set test_size and random state
+            self.para_window = TrainTestGetParameters()
+            self.para_window.show()
+            self.para_window.parameters.connect(self.traintest_split)
+        
+        if option == 'K-Fold':
+            self.para_window = KFoldGetParameters()
+            self.para_window.show()
+            self.para_window.parameters.connect(self.kFold_split)
+    
+    def kFold_split(self, parameters):
+        split = parameters[0]
+        kf = KFold(n_splits=int(split))
+        model = self.model
+        numbers = []
+        col_count = model.columnCount()
+        model.setColumnCount(col_count+1)
+        new_col = col_count
+        for row in range(1, model.rowCount()):
+            rand_num = np.random.rand()
+            self.model.setItem(int(row), int(new_col),QtGui.QStandardItem(str(rand_num)))
+            numbers.append(rand_num)
+
+        df = pd.DataFrame(numbers)
+        print(type(df))
+        for fold, x_fold in kf.split(df):
+            fold_df = pd.DataFrame(df.loc[fold])
+            foldx_df = pd.DataFrame(df.loc[x_fold])
+
+        x = []
+        x2_num = []
+        x.append(foldx_df.values.tolist())
+        for arr in x:
+           for lis in arr:
+                for num in lis:
+                    x2_num.append(num)
+        
+        for row in range(1, model.rowCount()):
+            index = model.index(row, col_count)
+            i = index.data()
+            for val in x2_num:
+                if str(i) == str(val):
+                    model.removeRow(row)
+        model.removeColumn(col_count)
+        self.para_window.close()
+            
+
+    def traintest_split(self,parameters):
+        size = float(parameters[0])
+        state = int(parameters[1])
+        # print(size,state)
+        model = self.model
+        numbers = []
+        col_count = model.columnCount()
+        model.setColumnCount(col_count+1)
+        new_col = col_count
+        for row in range(1, model.rowCount()):
+            rand_num = np.random.rand()
+            self.model.setItem(int(row), int(new_col),QtGui.QStandardItem(str(rand_num)))
+            numbers.append(rand_num)
+        x_numbers, x2_numbers = train_test_split(numbers, test_size=size, random_state=state)
+
+        for row in range(1, model.rowCount()):
+            index = model.index(row, col_count)
+            i = index.data()
+            for val in x2_numbers:
+                if str(i) == str(val):
+                    model.removeRow(row)
+        model.removeColumn(col_count)
+        self.para_window.close()
+
+class TrainTestGetParameters(QtWidgets.QMainWindow, QtWidgets.QWidget):
+
+    parameters = QtCore.pyqtSignal(list)
+    
+    def __init__(self, parent=None):
+        QtWidgets.QMainWindow.__init__(self)
+        self.subUI()
+
+    def subUI(self):
+        
+        self.test_lbl = QtWidgets.QLabel(self)
+        self.test_lbl.setText('Set Size')
+        self.test_lbl.setFixedWidth(80)
+        self.test_lbl.move(10,30)
+        self.test_lbl.setStyleSheet(stylesheet(self))
+
+        self.test_size = QtWidgets.QLineEdit(self)
+        self.test_size.setFixedWidth(40)
+        self.test_size.move(120,30)
+        self.test_size.setStyleSheet(stylesheet(self))
+
+        self.rand_lbl = QtWidgets.QLabel(self)
+        self.rand_lbl.setText('Set Random State')
+        self.rand_lbl.setFixedWidth(100)
+        self.rand_lbl.move(10,70)
+        self.rand_lbl.setStyleSheet(stylesheet(self))
+
+        self.rand_state = QtWidgets.QLineEdit(self)
+        self.rand_state.setFixedWidth(40)
+        self.rand_state.move(120,70)
+        self.rand_state.setStyleSheet(stylesheet(self))
+
+        self.confirm_para = QtWidgets.QPushButton(self)
+        self.confirm_para.setText('Get Parameters')
+        self.confirm_para.clicked.connect(self.get_parameters)
+        self.confirm_para.setFixedWidth(100)
+        self.confirm_para.move(50, 110)
+        self.confirm_para.setStyleSheet(stylesheet(self))
+
+        self.setWindowTitle('Parameters')
+        self.setMinimumSize(150,200)
+        self.show()
+
+    def get_parameters(self):
+
+        para = []
+        size = self.test_size.text()
+        state = self.rand_state.text()
+        para.append(size)
+        para.append(state)
+
+        self.parameters.emit(para)
+
+class KFoldGetParameters(QtWidgets.QMainWindow, QtWidgets.QWidget):
+
+    parameters = QtCore.pyqtSignal(list)
+    
+    def __init__(self, parent=None):
+        QtWidgets.QMainWindow.__init__(self)
+        self.subUI()
+
+    def subUI(self):
+        
+        self.fold_lbl = QtWidgets.QLabel(self)
+        self.fold_lbl.setText('Number of Folds')
+        self.fold_lbl.setFixedWidth(80)
+        self.fold_lbl.move(10,30)
+        self.fold_lbl.setStyleSheet(stylesheet(self))
+
+        self.n_fold = QtWidgets.QLineEdit(self)
+        self.n_fold.setFixedWidth(40)
+        self.n_fold.move(120,30)
+        self.n_fold.setStyleSheet(stylesheet(self))
+
+        self.confirm_para = QtWidgets.QPushButton(self)
+        self.confirm_para.setText('Get Parameters')
+        self.confirm_para.clicked.connect(self.get_parameters)
+        self.confirm_para.setFixedWidth(100)
+        self.confirm_para.move(50, 70)
+        self.confirm_para.setStyleSheet(stylesheet(self))
+
+        self.setWindowTitle('Parameters')
+        self.setMinimumSize(140,120)
+        self.show()
+
+    def get_parameters(self):
+        para = []
+
+        size = self.n_fold.text()
+        para.append(size)
+
+        self.parameters.emit(para)
+
+
+            
+
+
     
 
 def stylesheet(self):
