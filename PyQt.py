@@ -24,7 +24,8 @@ from PyQt5.QtWidgets import (QMainWindow , QAction, QWidget, QLineEdit, QMessage
 from faker import Faker
 
 from sklearn import preprocessing
-from nltk.tokenize import word_tokenize
+import uuid
+from nltk.tokenize import word_tokenize ##More for analytics
 
 
 class MainPage(QtWidgets.QMainWindow, QtWidgets.QWidget):
@@ -313,25 +314,34 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.hash_box.addItem('blake2b')
         self.hash_box.move(90, 200)
 
-        self.set_salt = QtWidgets.QLineEdit(self)
-        self.haveSalt = False
-        self.set_salt.setEchoMode(QLineEdit.Password)
-        self.set_salt.setFixedWidth(100)
-        self.set_salt.move(90,250)
-        self.set_salt.setStyleSheet(stylesheet(self))
+        # self.set_salt = QtWidgets.QLineEdit(self)
+        # self.haveSalt = False
+        # self.set_salt.setEchoMode(QLineEdit.Password)
+        # self.set_salt.setFixedWidth(100)
+        # self.set_salt.move(90,250)
+        # self.set_salt.setStyleSheet(stylesheet(self))
 
         self.salt_line = QtWidgets.QLabel(self)
         self.salt_line.setText('Set a salt')
         self.salt_line.setFixedWidth(80)
         self.salt_line.move(10,250)
         self.salt_line.setStyleSheet(stylesheet(self))
+
+        self.setSalt = QtWidgets.QComboBox(self)
+        self.haveSalt = False
+        self.setSalt.addItem('Use no salt')
+        self.setSalt.addItem('Generate UUID as salt')
+        self.setSalt.addItem('Enter own salt')
+        self.setSalt.move(90,250)
+        self.setSalt.setFixedWidth(150)
+        self.setSalt.setStyleSheet(stylesheet(self))
         
         self.confirm_salt = QtWidgets.QPushButton(self)
         self.saltConfirmed = False
-        self.confirm_salt.setText('Confirm Salt')
+        self.confirm_salt.setText('Select Method')
         self.confirm_salt.clicked.connect(self.new_salt_window)
         self.confirm_salt.setFixedWidth(80)
-        self.confirm_salt.move(200, 250)
+        self.confirm_salt.move(250, 250)
         self.confirm_salt.setStyleSheet(stylesheet(self))
 
         self.to_hash = QtWidgets.QPushButton(self)
@@ -393,18 +403,29 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.show()
 
     def new_salt_window(self):
-        salt = self.set_salt.text()
-        self.salt_window = newSaltWindow(salt)
-        self.salt_window.show()
-        self.salt_window.message.connect(self.confirmSalt)
+        salt = self.setSalt.itemText(self.setSalt.currentIndex())
+        print('You have chosen to', salt)
+
+        if salt == 'Use no salt':
+            self.hashSalt = ''
+            pass
+        if salt == 'Generate UUID as salt':
+            self.hashSalt = uuid.uuid4()
+            self.saltConfirmed = True
+        if salt == 'Enter own salt':
+            self.salt_window = newSaltWindow(salt)
+            self.salt_window.show()
+            self.salt_window.message.connect(self.confirmSalt)
     
     def confirmSalt(self, message):
-        msg = message
+        msg = message[0]
+        self.hashSalt = str(message[1])
         # print(msg)
         if msg == 'clicked!':
             self.saltConfirmed = True
         
     def hash_this(self):
+        hashing_salt = ''
         self.choices = [self.colModel.item(i).text() for i in
                         range(self.colModel.rowCount())
                         if self.colModel.item(i).checkState()
@@ -428,13 +449,15 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
 
             print('Hashing Method:', selected_hash)
 
-            hashing_salt = self.set_salt.text()
-            if hashing_salt == '':
+            hash_mtd = self.setSalt.itemText(self.setSalt.currentIndex())
+
+            if hash_mtd == 'Use no salt':
                 print('No salt used')
                 values.append(hashing_salt)
                 self.hashPara(values)
             else:
                 if self.saltConfirmed is True:
+                    hashing_salt = self.hashSalt
                     print('Salt to use', hashing_salt)
                     values.append(hashing_salt)
                     self.hashPara(values)
@@ -442,7 +465,7 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
                     print('Please confirm salt')
         
     def saveSalt(self):
-        salt = self.set_salt.text()
+        salt = str(self.hashSalt)
         new_file, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save File", 
                         (QtCore.QDir.homePath() + "/" + "salt"+ ".txt"), 'txt files (*.txt)')
         
@@ -558,7 +581,7 @@ class childForm(QtWidgets.QMainWindow, QtWidgets.QWidget):
 
 class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
 
-    message = QtCore.pyqtSignal(str)
+    message = QtCore.pyqtSignal(list)
     
     def __init__(self, salt, parent=None):
         QtWidgets.QMainWindow.__init__(self)
@@ -578,32 +601,46 @@ class newSaltWindow(QtWidgets.QMainWindow, QtWidgets.QWidget):
         self.salt_line = QtWidgets.QLineEdit(self)
         self.salt_line.setEchoMode(QLineEdit.Password)
         self.salt_line.setFixedWidth(100)
-        self.salt_line.move(50,40)
+        self.salt_line.move(120,10)
         self.salt_line.setStyleSheet(stylesheet(self))
 
+        self.confirm_text = QtWidgets.QLabel(self)
+        self.confirm_text.setText('Re-confirm Salt')
+        self.confirm_text.setFixedWidth(150)
+        self.confirm_text.move(10, 50)
+        self.confirm_text.setStyleSheet(stylesheet(self))
+
+        self.comfirm_line = QtWidgets.QLineEdit(self)
+        self.comfirm_line.setEchoMode(QLineEdit.Password)
+        self.comfirm_line.setFixedWidth(100)
+        self.comfirm_line.move(120,50)
+        self.comfirm_line.setStyleSheet(stylesheet(self))
+
         self.confirm_salt = QtWidgets.QPushButton(self)
-        self.confirm_salt.setText('Re-confirm Salt')
+        self.confirm_salt.setText('Use Own Salt')
         self.confirm_salt.clicked.connect(self.match_salt)
         self.confirm_salt.setFixedWidth(150)
-        self.confirm_salt.move(25, 80)
+        self.confirm_salt.move(25, 100)
         self.confirm_salt.setStyleSheet(stylesheet(self))
 
-        self.setWindowTitle('Confirm Salt')
-        self.setMinimumSize(150,150)
+        self.setWindowTitle('Own Salt')
+        self.setMinimumSize(280,150)
         self.show()
     
     def match_salt(self):
         msg = 'notclicked:('
-        model = self.model
         new_salt = self.salt_line.text()
-        initial_salt = self.salt
+        confirm_salt = self.comfirm_line.text()
 
         # print(new_salt, initial_salt)
 
-        if (new_salt == initial_salt):
+        if (new_salt == confirm_salt):
+            lst = []
             print('Salts match!')
             msg = 'clicked!'
-            self.message.emit(msg)
+            lst.append(msg)
+            lst.append(new_salt)
+            self.message.emit(lst)
             self.close()
         else:
             print("Salts don't match. Try again.")
